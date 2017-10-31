@@ -91,7 +91,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&orgNameFlag, "org", "", "Github organization shortname")
 	RootCmd.PersistentFlags().StringVar(&apiKeyFlag, "key", "", "Github API key")
 	RootCmd.PersistentFlags().StringVarP(&returnFormatFlag, "format", "f", "table", "The format to print to screen: table|json")
-	RootCmd.PersistentFlags().StringVarP(&orderbyFlag, "orderby", "o", "UpdatedAt,desc", "Order the results: columnName,asc|desc")
+	RootCmd.PersistentFlags().StringVarP(&orderbyFlag, "orderby", "o", "UpdatedAt__desc", "Order the results: columnName__asc|desc")
 	RootCmd.PersistentFlags().StringVarP(&columnsFlag, "columns", "c", "URL,Approved", "List of columns to return")
 }
 
