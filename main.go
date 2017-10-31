@@ -69,7 +69,7 @@ var (
 			}
 
 			var cols []string
-			if columnsFlag == "*" {
+			if columnsFlag == "all" {
 				cols = pullrequests.Columns
 			} else {
 				cols = strings.Split(columnsFlag, ",")
