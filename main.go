@@ -28,13 +28,35 @@ var (
 				return
 			}
 
-			orders := strings.Split(orderbyFlag, ",")
-			if len(orders) != 2 {
-				fmt.Println("'orderby' should be formatted: 'columnName,direction'")
-				return
+			orderingOpts := strings.Split(orderbyFlag, ",")
+			var orderings [][]string
+			for _, o := range orderingOpts {
+				opts := strings.Split(o, "__")
+
+				if len(opts) != 2 {
+					fmt.Println("'orderby' should be formatted: 'columnName__direction,'")
+					return
+				}
+
+				inList := false
+				for _, col := range pullrequests.Columns {
+					if col != opts[0] {
+						inList = true
+						break
+					}
+				}
+				if inList == false {
+					fmt.Println("'orderby' column name not recognised")
+					return
+				}
+
+				if !(opts[1] == "asc" || opts[1] == "desc") {
+					fmt.Println("'orderby' direction should be 'asc' or 'desc'")
+					return
+				}
+
+				orderings = append(orderings, opts)
 			}
-			orderCol := orders[0]
-			orderDirection := orders[1]
 
 			_, prs, err := pullrequests.GetPRs(orgNameFlag, apiKeyFlag)
 			if err != nil {
@@ -42,7 +64,9 @@ var (
 				return
 			}
 
-			prs = prs.Sort(orderCol, orderDirection)
+			for _, ord := range orderings {
+				prs = prs.Sort(ord[0], ord[1])
+			}
 
 			var cols []string
 			if columnsFlag == "*" {
