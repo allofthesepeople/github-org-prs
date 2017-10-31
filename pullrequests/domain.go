@@ -7,6 +7,20 @@ import (
 	"time"
 )
 
+var (
+	Columns = []string{
+		"RepoName",
+		"URL",
+		"CreatedAt",
+		"UpdatedAt",
+		"Author",
+		"TotalReviews",
+		"Approved",
+		"ChangesRequested",
+		"Reviewers",
+	}
+)
+
 type PullRequestContainer []PullRequest
 
 func (c *PullRequestContainer) Filter(column string, value interface{}) PullRequestContainer {
@@ -43,7 +57,7 @@ func (c *PullRequestContainer) Sort(column, direction string) PullRequestContain
 	return prc
 }
 
-func (c *PullRequestContainer) Headers() []string {
+func (c *PullRequestContainer) Headers(cols []string) []string {
 	return []string{
 		"RepoName",
 		"URL",
@@ -94,16 +108,31 @@ func (pr *PullRequest) AddState(state string) {
 	}
 }
 
-func (pr *PullRequest) ToStrings() []string {
-	return []string{
-		pr.RepoName,
-		pr.URL,
-		pr.CreatedAt.Format(time.RFC822),
-		pr.UpdatedAt.Format(time.RFC822),
-		pr.Author,
-		strconv.Itoa(pr.TotalReviews),
-		strconv.FormatBool(pr.Approved),
-		strconv.FormatBool(pr.ChangesRequested),
-		strings.Join(pr.Reviewers, ", "),
+func (pr *PullRequest) ToStrings(cols []string) []string {
+	var retCols []string
+
+	for _, c := range cols {
+		switch c {
+		case "RepoName":
+			retCols = append(retCols, pr.RepoName)
+		case "URL":
+			retCols = append(retCols, pr.URL)
+		case "CreatedAt":
+			retCols = append(retCols, pr.CreatedAt.Format(time.RFC822))
+		case "UpdatedAt":
+			retCols = append(retCols, pr.UpdatedAt.Format(time.RFC822))
+		case "Author":
+			retCols = append(retCols, pr.Author)
+		case "TotalReviews":
+			retCols = append(retCols, strconv.Itoa(pr.TotalReviews))
+		case "Approved":
+			retCols = append(retCols, strconv.FormatBool(pr.Approved))
+		case "ChangesRequested":
+			retCols = append(retCols, strconv.FormatBool(pr.ChangesRequested))
+		case "Reviewers":
+			retCols = append(retCols, strings.Join(pr.Reviewers, ", "))
+		}
 	}
+
+	return retCols
 }

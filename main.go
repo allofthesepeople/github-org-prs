@@ -12,22 +12,23 @@ import (
 )
 
 var (
-	orgName      string
-	apiKey       string
-	returnFormat string
-	orderby      string
+	orgNameFlag      string
+	apiKeyFlag       string
+	returnFormatFlag string
+	orderbyFlag      string
+	columnsFlag      string
 
 	RootCmd = &cobra.Command{
 		Use:   "",
 		Short: "",
 		Long:  ``,
 		Run: func(cmd *cobra.Command, args []string) {
-			if orgName == "" || apiKey == "" {
+			if orgNameFlag == "" || apiKeyFlag == "" {
 				fmt.Println("'org' and 'key' flags must be set")
 				return
 			}
 
-			orders := strings.Split(orderby, ",")
+			orders := strings.Split(orderbyFlag, ",")
 			if len(orders) != 2 {
 				fmt.Println("'orderby' should be formatted: 'columnName,direction'")
 				return
@@ -35,7 +36,7 @@ var (
 			orderCol := orders[0]
 			orderDirection := orders[1]
 
-			_, prs, err := pullrequests.GetPRs(orgName, apiKey)
+			_, prs, err := pullrequests.GetPRs(orgNameFlag, apiKeyFlag)
 			if err != nil {
 				fmt.Println(err)
 				return
@@ -43,7 +44,14 @@ var (
 
 			prs = prs.Sort(orderCol, orderDirection)
 
-			printToScreen(prs)
+			var cols []string
+			if columnsFlag == "*" {
+				cols = pullrequests.Columns
+			} else {
+				cols = strings.Split(columnsFlag, ",")
+			}
+
+			printToScreen(prs, cols)
 		},
 	}
 )
@@ -56,24 +64,24 @@ func main() {
 }
 
 func init() {
-	RootCmd.PersistentFlags().StringVar(&orgName, "org", "", "Github organization shortname")
-	RootCmd.PersistentFlags().StringVar(&apiKey, "key", "", "Github API key")
-	RootCmd.PersistentFlags().StringVarP(&returnFormat, "format", "f", "table", "The format to print to screen: table|json")
-	RootCmd.PersistentFlags().StringVarP(&orderby, "orderby", "o", "UpdatedAt,desc", "Order the results: columnName,asc|desc ")
-
+	RootCmd.PersistentFlags().StringVar(&orgNameFlag, "org", "", "Github organization shortname")
+	RootCmd.PersistentFlags().StringVar(&apiKeyFlag, "key", "", "Github API key")
+	RootCmd.PersistentFlags().StringVarP(&returnFormatFlag, "format", "f", "table", "The format to print to screen: table|json")
+	RootCmd.PersistentFlags().StringVarP(&orderbyFlag, "orderby", "o", "UpdatedAt,desc", "Order the results: columnName,asc|desc")
+	RootCmd.PersistentFlags().StringVarP(&columnsFlag, "columns", "c", "URL,Approved", "List of columns to return")
 }
 
-func printToScreen(prs pullrequests.PullRequestContainer) {
-	switch returnFormat {
+func printToScreen(prs pullrequests.PullRequestContainer, columns []string) {
+	switch returnFormatFlag {
 	case "table":
 		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader(prs.Headers())
+		table.SetHeader(columns)
 		table.SetBorder(false)
 		table.SetHeaderLine(false)
 		table.SetHeaderAlignment(3)
 		table.SetColumnSeparator("")
 		for _, pr := range prs {
-			table.Append(pr.ToStrings())
+			table.Append(pr.ToStrings(columns))
 		}
 		table.Render()
 		return
