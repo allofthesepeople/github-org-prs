@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -28,43 +29,19 @@ var (
 				return
 			}
 
-			orderingOpts := strings.Split(orderbyFlag, ",")
-			var orderings [][]string
-			for _, o := range orderingOpts {
-				opts := strings.Split(o, "__")
-
-				if len(opts) != 2 {
-					fmt.Println("'orderby' should be formatted: 'columnName__direction,'")
-					return
-				}
-
-				inList := false
-				for _, col := range pullrequests.Columns {
-					if col != opts[0] {
-						inList = true
-						break
-					}
-				}
-				if inList == false {
-					fmt.Println("'orderby' column name not recognised")
-					return
-				}
-
-				if !(opts[1] == "asc" || opts[1] == "desc") {
-					fmt.Println("'orderby' direction should be 'asc' or 'desc'")
-					return
-				}
-
-				orderings = append(orderings, opts)
-			}
-
 			_, prs, err := pullrequests.GetPRs(orgNameFlag, apiKeyFlag)
 			if err != nil {
 				fmt.Println(err)
 				return
 			}
 
-			for _, ord := range orderings {
+			orderingArgs, err := setOrderArgs()
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+
+			for _, ord := range orderingArgs {
 				prs = prs.Sort(ord[0], ord[1])
 			}
 
@@ -117,4 +94,34 @@ func printToScreen(prs pullrequests.PullRequestContainer, columns []string) {
 		}
 		fmt.Println(fmt.Sprintf("%s", prsBytes))
 	}
+}
+
+func setOrderArgs() ([][]string, error) {
+	orderingOpts := strings.Split(orderbyFlag, ",")
+	var orderingArgs [][]string
+	for _, o := range orderingOpts {
+		opts := strings.Split(o, "__")
+
+		if len(opts) != 2 {
+			return nil, errors.New("'orderby' should be formatted: 'columnName__direction,'")
+		}
+
+		inList := false
+		for _, col := range pullrequests.Columns {
+			if col != opts[0] {
+				inList = true
+				break
+			}
+		}
+		if inList == false {
+			return nil, errors.New("'orderby' column name not recognised")
+		}
+
+		if !(opts[1] == "asc" || opts[1] == "desc") {
+			return nil, errors.New("'orderby' direction should be 'asc' or 'desc'")
+		}
+
+		orderingArgs = append(orderingArgs, opts)
+	}
+	return orderingArgs, nil
 }

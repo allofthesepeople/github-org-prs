@@ -13,6 +13,7 @@ import (
 
 const (
 	requiredApprovals   = 2
+	githubAPIURL        = "https://api.github.com/graphql"
 	githubQueryTemplate = `query {
 			viewer {
 				login
@@ -66,7 +67,7 @@ func makeRequest(apiKey, orgName string) ([]byte, error) {
 	q := fmt.Sprintf(`{"query": "%s"}`, graphQuery)
 
 	client := &http.Client{}
-	req, err := http.NewRequest("POST", "https://api.github.com/graphql", bytes.NewBufferString(q))
+	req, err := http.NewRequest("POST", githubAPIURL, bytes.NewBufferString(q))
 	if err != nil {
 		return nil, err
 	}
