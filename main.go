@@ -13,11 +13,12 @@ import (
 )
 
 var (
-	orgNameFlag      string
-	apiKeyFlag       string
-	returnFormatFlag string
-	orderbyFlag      string
-	columnsFlag      string
+	orgNameFlag string
+	apiKeyFlag  string
+	outputFlag  string
+	sortByFlag  string
+	columnsFlag string
+	filtersFlag []string
 
 	RootCmd = &cobra.Command{
 		Use:   "",
@@ -29,22 +30,40 @@ var (
 				return
 			}
 
+			// Get all PRs
 			_, prs, err := pullrequests.GetPRs(orgNameFlag, apiKeyFlag)
 			if err != nil {
 				fmt.Println(err)
 				return
 			}
 
-			orderingArgs, err := setOrderArgs()
+			// Filter
+			filterArgs, err := setFilterArgs()
 			if err != nil {
 				fmt.Println(err)
 				return
 			}
 
-			for _, ord := range orderingArgs {
-				prs = prs.Sort(ord[0], ord[1])
+			for _, filterArg := range filterArgs {
+				prs, err = prs.Filter(filterArg[0], filterArg[1], filterArg[2])
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
 			}
 
+			// Sort
+			sortArgs, err := setSortArgs()
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+
+			for _, sortArg := range sortArgs {
+				prs = prs.Sort(sortArg[0], sortArg[1])
+			}
+
+			// Set Columns
 			var cols []string
 			if columnsFlag == "all" {
 				cols = pullrequests.Columns
@@ -52,6 +71,7 @@ var (
 				cols = strings.Split(columnsFlag, ",")
 			}
 
+			// Print to screen
 			printToScreen(prs, cols)
 		},
 	}
@@ -67,13 +87,14 @@ func main() {
 func init() {
 	RootCmd.PersistentFlags().StringVar(&orgNameFlag, "org", "", "Github organization shortname")
 	RootCmd.PersistentFlags().StringVar(&apiKeyFlag, "key", "", "Github API key")
-	RootCmd.PersistentFlags().StringVarP(&returnFormatFlag, "format", "f", "table", "The format to print to screen: table|json")
-	RootCmd.PersistentFlags().StringVarP(&orderbyFlag, "orderby", "o", "UpdatedAt__desc", "Order the results: columnName__asc|desc")
+	RootCmd.PersistentFlags().StringVarP(&outputFlag, "output", "o", "table", "The format to print to screen: table|json")
+	RootCmd.PersistentFlags().StringVarP(&sortByFlag, "sortby", "s", "UpdatedAt__desc", "Order the results: columnName__asc|desc")
 	RootCmd.PersistentFlags().StringVarP(&columnsFlag, "columns", "c", "URL,Approved", "List of columns to return")
+	RootCmd.PersistentFlags().StringArrayVarP(&filtersFlag, "filters", "f", []string{}, "List of filters to apply")
 }
 
 func printToScreen(prs pullrequests.PullRequestContainer, columns []string) {
-	switch returnFormatFlag {
+	switch outputFlag {
 	case "table":
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetHeader(columns)
@@ -96,8 +117,8 @@ func printToScreen(prs pullrequests.PullRequestContainer, columns []string) {
 	}
 }
 
-func setOrderArgs() ([][]string, error) {
-	orderingOpts := strings.Split(orderbyFlag, ",")
+func setSortArgs() ([][]string, error) {
+	orderingOpts := strings.Split(sortByFlag, ",")
 	var orderingArgs [][]string
 	for _, o := range orderingOpts {
 		opts := strings.Split(o, "__")
@@ -124,4 +145,37 @@ func setOrderArgs() ([][]string, error) {
 		orderingArgs = append(orderingArgs, opts)
 	}
 	return orderingArgs, nil
+}
+
+func setFilterArgs() ([][]string, error) {
+
+	var filterArgs [][]string
+
+	for _, f := range filtersFlag {
+		opts := strings.Split(f, ",")
+
+		if len(opts) != 3 {
+			return nil, errors.New("'filters' should be formatted: '{operator},{columnName},{value},'")
+		}
+
+		// Operator is available?
+		if !(opts[0] == "eq" || opts[0] == "neq") {
+			return nil, errors.New("'filters' operator not recognised: should be 'eq' or 'neq'")
+		}
+
+		// ColumnName available?
+		inList := false
+		for _, col := range pullrequests.Columns {
+			if col != opts[1] {
+				inList = true
+				break
+			}
+		}
+		if inList == false {
+			return nil, errors.New("'filters' column name not recognised")
+		}
+
+		filterArgs = append(filterArgs, opts)
+	}
+	return filterArgs, nil
 }

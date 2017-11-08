@@ -1,6 +1,7 @@
 package pullrequests
 
 import (
+	"errors"
 	"sort"
 	"strconv"
 	"strings"
@@ -23,10 +24,30 @@ var (
 
 type PullRequestContainer []PullRequest
 
-func (c *PullRequestContainer) Filter(column string, value interface{}) PullRequestContainer {
-	return *c
+func (c *PullRequestContainer) Filter(operator, colName, compareVal string) (PullRequestContainer, error) {
+	var prc PullRequestContainer
+
+	for _, pr := range *c {
+		colVal, err := pr.GetValueByColumnName(colName)
+		if err != nil {
+			return nil, err
+		}
+
+		f, err := NewColumnFilter(colName, colVal, compareVal)
+		if err != nil {
+			return nil, err
+		}
+
+		success, err := DoFilter(operator, f)
+		if success == true {
+			prc = append(prc, pr)
+		}
+	}
+
+	return prc, nil
 }
 
+// Sort works with the converion of "{columnname}__{direction}""
 func (c *PullRequestContainer) Sort(column, direction string) PullRequestContainer {
 	prc := *c
 	s := column + "__" + direction
@@ -135,4 +156,29 @@ func (pr *PullRequest) ToStrings(cols []string) []string {
 	}
 
 	return retCols
+}
+
+func (pr *PullRequest) GetValueByColumnName(columnName string) (interface{}, error) {
+	switch columnName {
+	case "RepoName":
+		return pr.RepoName, nil
+	case "URL":
+		return pr.URL, nil
+	case "CreatedAt":
+		return pr.CreatedAt, nil
+	case "UpdatedAt":
+		return pr.UpdatedAt, nil
+	case "Author":
+		return pr.Author, nil
+	case "TotalReviews":
+		return pr.TotalReviews, nil
+	case "Approved":
+		return pr.Approved, nil
+	case "ChangesRequested":
+		return pr.ChangesRequested, nil
+	case "Reviewers":
+		return pr.Reviewers, nil
+	}
+
+	return nil, errors.New("Unknown Column Name")
 }
