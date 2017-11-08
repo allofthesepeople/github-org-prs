@@ -103,6 +103,7 @@ func printToScreen(prs pullrequests.PullRequestContainer, columns []string) {
 		table.SetHeaderAlignment(3)
 		table.SetColumnSeparator("")
 		table.SetAutoWrapText(false)
+		table.SetAutoFormatHeaders(false)
 		for _, pr := range prs {
 			table.Append(pr.ToStrings(columns))
 		}
